@@ -1,89 +1,65 @@
-const mongoose = require('mongoose'); //mongo
+const mongoose = require('mongoose'); // mongoose is a module for mongodb, it allows us to talk to mongoDb
 mongoose.connect('mongodb://localhost/fetcher');
+const db = mongoose.connection;
 
-//define schema
-//https://docs.mongodb.com/manual/core/index-unique/
-let repoSchema = mongoose.Schema({
-  _id: Number, //repo.id
-  name: String, //repo.name
-  owner: String, //repo.owner.login
-  url: String, //repo.html_url
-  // created_at: {
-  //   type: Date,
-  //   //`Date.now() returns current unix timestsamp as a number
-  //   // subtract date.now from "created_at"
-  //   default: Date.now
-        ////////////////////////////////
-        //   var schema = new Schema({
-        //   title: String,
-        //   date: {
-        //     type: Date,
-        //     // `Date.now()` returns the current unix timestamp as a number
-        //     default: Date.now
-        //   }
-        // });
-
-        // var BlogPost = db.model('BlogPost', schema);
-
-        // var post = new BlogPost({title: '5 Best Arnold Schwarzenegger Movies'});
-
-        // // The post has a default Date set to now
-        // assert.ok(post.date.getTime() >= Date.now() - 1000);
-        // assert.ok(post.date.getTime() <= Date.now());
-        ////////////////////////////////
-  // },
-  description: String, //repo.description
-  stargazers_count: Number, //repo.stargazers_count
-  forks_count: Number //repo.forks_count
+let repoSchema = mongoose.Schema({ // using mongoose to create a schema
+  id: Number,
+  name: String,
+  owner: String,
+  description: String,
+  created_At: String,
+  html_url: String,
+  stargazers_count:Number,
+  forks:Number
 });
 
-//compile schema to model
 let Repo = mongoose.model('Repo', repoSchema);
 
-let save = (data) => {
-  // TODO: Your code here
-  // This function should save a repo or repos to
-  // the MongoDB
-  //https://mongoosejs.com/docs/api.html#model_Model-save
-  //inserting doc into db: https://www.tutorialkart.com/nodejs/mongoose/insert-document-to-mongodb/
+let save = (githubObject) => { //githubObject is an array of objects
 
-  //a document instance
-  var doc = new Repo({
-    _id: data.id,
-    name: data.name,
-    owner: data.owner.login,
-    url: data.html_url,
-    description: data.description,
-    stargazers_cout: data.stargazers_count,
-    forks_count: data.forks_count
-  })
+  var repoArray = [];
+  var parsedRepos = JSON.parse(githubObject.body); //array of repo objects
 
-  //save model to database
-  // book1.save(function (err, book) {
-  //   if (err) return console.error(err);
-  //   console.log(book.name + " saved to bookstore collection.");
-  // });
-  
-  // doc.save()
-  //   .then(doc =>
-  //     console.log('yay ' + doc + ' successfully saved')
-  //   })
-  //   .catch(err => {
-  //     console.error(err)
-  //   })
-  doc.save(err => { if (err) return console.log(err) });
+  for (var i = 0; i < parsedRepos.length; i++) {
+    var repoObj = {};
+
+    repoObj.id = parsedRepos[i].id;
+    repoObj.name = parsedRepos[i].name;
+    repoObj.owner = parsedRepos[i].owner.login;
+    repoObj.description = parsedRepos[i].description;
+    repoObj.created_At = parsedRepos[i].created_at;
+    repoObj.html_url = parsedRepos[i].html_url;
+    repoObj.stargazers_count = parsedRepos[i].stargazers_count;
+    var repo = new Repo(repoObj); //new document
+
+    repo.save(function (err) {
+      if (err) {
+        console.log(err);
+      }
+    })
+
+    repoArray.push(repoObj);
   }
 
-  let fetch = (callback) => {
-    let cb = (err, repos) => { callback(repose) };
-    Repo.find(cb).sort('-stargazers_count').limit(25);
-  }
-// Repo
-//   .find(repos)
-//   .sort('-stargazers_count').limit(25);
-//   })
-//   .limit(25);
-//   })
+  console.log('this is combination of Array', repoArray);
+
+}
+
+let fetchRepo=function(callback){
+  Repo.find(function(err, repos) {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log('*******', repos);
+      callback(repos);
+    }
+  }).
+  sort({'name':1}).
+  limit(25)
+
+
+
+}
 
 module.exports.save = save;
-module.exports.fetch = fetch;
+module.exports.fetchRepo = fetchRepo;
